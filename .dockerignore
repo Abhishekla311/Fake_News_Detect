@@ -1,0 +1,24 @@
+# Virtual Environment
+venv/
+env/
+.venv/
+
+# Git & DVC local tracking files
+.git/
+.gitignore
+.dvc/cache/
+.dvc/tmp/
+.dvcignore
+
+# Python bytecode & Cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Environment secrets
+.env
+
+# Logs and system files
+*.log
+.DS_Store
