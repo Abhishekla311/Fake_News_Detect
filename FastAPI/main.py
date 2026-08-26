@@ -24,6 +24,12 @@ async def lifespan(app: FastAPI):
         if os.path.exists(MODEL_OUTPUT_PATH) and os.path.exists(VECTORIZER_PATH):
             model = joblib.load(MODEL_OUTPUT_PATH)
             vectorizer = joblib.load(VECTORIZER_PATH)
+            
+            # --- FIX FOR SCIKIT-LEARN VERSION MISMATCH ---
+            if not hasattr(model, 'multi_class'):
+                model.multi_class = 'auto'
+            # ----------------------------------------------
+
             print("Successfully loaded Model and Vectorizer.")
         else:
             print("Warning: Model or Vectorizer path does not exist.")
