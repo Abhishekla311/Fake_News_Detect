@@ -1,0 +1,26 @@
+artifacts_root: artifacts
+data_ingestion:
+  bucket_name: "fakenews098"
+  bucket_file_name: "news.csv"
+  train_ratio: 0.8
+  target_column: "label"
+
+  raw_dir : artifacts/data_ingestion/raw
+  raw_file_path: artifacts/data_ingestion/raw/train.csv
+  test_file_path: artifacts/data_ingestion/raw/test.csv
+
+data_preprocessing:
+  impute_missing_value: true
+  text_columns_to_impute: 
+    - "title"
+    - "text"
+  impute_value: " "
+  create_content_feature: true
+  target_column: "label"
+  text_cleaning:
+    lower_case: True
+    remove_special_characters: True
+    remove_stop_words: True
+    language: "english"
+    apply_stemming: true
+    

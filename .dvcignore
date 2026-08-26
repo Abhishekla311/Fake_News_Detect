@@ -1,0 +1,14 @@
+# Initialize DVC (if not already initialized)
+dvc init
+
+# Track data and artifact folders/files with DVC
+dvc add artifact/
+dvc add artifacts/
+dvc add data/
+
+# Track individual data files if not using directories
+dvc add artifact/processed/processed_train.csv
+dvc add artifact/processed/processed_test.csv
+dvc add artifact/processed/vectorizer.pkl
+dvc add artifact/raw/raw.csv
+dvc add artifacts/model.pkl

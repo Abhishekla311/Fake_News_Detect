@@ -1,0 +1,17 @@
+# Virtual Environment & Python cache
+venv/
+__pycache__/
+*.pyc
+
+# DVC local cache and run files
+.dvc/cache
+.dvc/tmp
+
+# Data and Models (tracked by DVC instead)
+artifact/
+artifacts/
+data/
+logs/
+*.csv
+*.pkl
+.env
