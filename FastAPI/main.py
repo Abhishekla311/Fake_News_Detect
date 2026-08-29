@@ -35,7 +35,7 @@ def clean_text(text: str) -> str:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global model, vectorizer, drift_detector
+   
     try:
         if os.path.exists(MODEL_OUTPUT_PATH) and os.path.exists(VECTORIZER_PATH):
             model = joblib.load(MODEL_OUTPUT_PATH)
