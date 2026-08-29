@@ -20,10 +20,9 @@ __pycache__/
 .dvc/tmp
 
 # Data and Models (tracked by DVC instead)
-artifact/
-artifacts/
+
 data/
 logs/
 *.csv
-*.pkl
+
 .env
