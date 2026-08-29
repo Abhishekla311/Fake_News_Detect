@@ -29,25 +29,25 @@ jobs:
         run: |
           flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
 
-      # AWS US-EAST-1 कीज़ के साथ डेटा इनजेशन टेस्ट रन करना
+      # AWS US-EAST-1 कीज़ और ऑटो-ट्रिम सेफ्टी नेट के साथ डेटा इनजेशन टेस्ट रन करना
       - name: Run Data Ingestion Validation
         env:
-          AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY_ID}}
-          AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: "us-east-1"
-          # 🌟 यह पायथन को रूट डायरेक्टरी से config, utils आदि इम्पोर्ट करने की अनुमति देगा
           PYTHONPATH: .
         run: |
-          python src/data_ingestion/data_ingestion.py
+          CLEAN_AWS_ID=$(echo -n "$AWS_ACCESS_KEY_ID" | tr -d '\r\n ' )
+          CLEAN_AWS_SECRET=$(echo -n "$AWS_SECRET_ACCESS_KEY" | tr -d '\r\n ' )
+          AWS_ACCESS_KEY_ID=$CLEAN_AWS_ID AWS_SECRET_ACCESS_KEY=$CLEAN_AWS_SECRET python src/data_ingestion/data_ingestion.py
 
       - name: Setup Astronomer Engine Framework
         run: |
-          curl -sSL https://install.astronomer.io | sudo bash
+          curl -sSL https://astronomer.io | sudo bash
 
       - name: Validate DAG Integrity (Parse Check)
         run: |
-          # 🌟 पुराने कमांड 'astro dag parse' को नए कमांड 'astro dev parse' से बदल दिया गया है
-          astro dev par
+          astro dev parse
 
   containerization-and-delivery:
     needs: code-quality-and-pipeline-test
@@ -57,30 +57,53 @@ jobs:
       - name: Fetch Repository Source
         uses: actions/checkout@v4
 
-      # 1. AWS Credentials कॉन्फ़िगर करें (ECR एक्सेस के लिए)
+      # 1. AWS Credentials कॉन्फ़िगर करें (ECR और EKS एक्सेस के लिए)
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{secrets.AWS_ACCESS_KEY_ID}}
-          aws-secret-access-key: ${{secrets.AWS_SECRET_ACCESS_KEY}}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
-      # 2. Amazon ECR में सुरक्षित रूप से लॉगिन करें
+      # 2. Amazon ECR में लॉगिन करें
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
+      # 🔥 3. ऑटो-क्रिएट सुरक्षा कवच: यह आपके अकाउंट में 'fake-news-mlops' रिपॉजिटरी खुद बना देगा
+      - name: Auto Create ECR Repository if missing
+        run: |
+          aws ecr describe-repositories --repository-names fake-news-mlops --region us-east-1 || \
+          aws ecr create-repository --repository-name fake-news-mlops --region us-east-1
+
       - name: Configure Advanced Build Tools (Buildx)
         uses: docker/setup-buildx-action@v3
 
-      # 3. Docker Image बिल्ड करके AWS ECR में पुश करें
+      # 4. Docker Image बिल्ड करके AWS ECR में पुश करें
       - name: Build and Push Immutable Container to AWS ECR
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
           tags: |
-            ${{steps.login-ecr.outputs.registry}}/fake-news-mlops:latest
-            ${{steps.login-ecr.outputs.registry}}/fake-news-mlops:${{github.sha}}
+            ${{ steps.login-ecr.outputs.registry }}/fake-news-mlops:latest
+            ${{ steps.login-ecr.outputs.registry }}/fake-news-mlops:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      # 5. k8s फ़ोल्डर के अंदर मौजूद पैरामेटर्स को असली Secrets (Base64 कनवर्टेड) से बदलना
+      - name: Inject Secure Base64 Secrets to K8s Manifest
+        run: |
+          B64_AWS_ID=$(echo -n "${{secrets.AWS_ACCESS_KEY_ID}}" | base64 -w 0)
+          B64_AWS_SECRET=$(echo -n "${{secrets.AWS_SECRET_ACCESS_KEY}}" | base64 -w 0)
+          B64_CAPSTONE=$(echo -n "${{secrets.CAPSTONE_TEST}}" | base64 -w 0)
+          
+          sed -i "s/AWS_ACCESS_KEY_ID_PLACEHOLDER/$B64_AWS_ID/g" k8s/k8s-deployment.yaml
+          sed -i "s/AWS_SECRET_ACCESS_KEY_PLACEHOLDER/$B64_AWS_SECRET/g" k8s/k8s-deployment.yaml
+          sed -i "s/CAPSTONE_TEST_PLACEHOLDER/$B64_CAPSTONE/g" k8s/k8s-deployment.yaml
+
+      # 6. k8s फ़ोल्डर के मैनिफेस्ट को सीधे अमेज़न EKS क्लस्टर पर अप्लाई करना
+      - name: Deploy Manifests to Amazon EKS Cluster
+        run: |
+          aws eks update-kubeconfig --region us-east-1 --name fake-news-mlops
+          kubectl apply -f k8s/k8s-deployment.yaml
