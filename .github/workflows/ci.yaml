@@ -81,6 +81,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       # 4. Docker Image बिल्ड करके AWS ECR में पुश करें
+           # 3. Docker Image बिल्ड करके सीधे आपकी 672755423000 रिपॉजिटरी में पुश करना
       - name: Build and Push Immutable Container to AWS ECR
         uses: docker/build-push-action@v5
         with:
@@ -93,4 +94,3 @@ jobs:
             ://amazonaws.com{{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
