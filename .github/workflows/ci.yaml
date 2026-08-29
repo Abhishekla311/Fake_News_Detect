@@ -35,6 +35,8 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: "us-east-1"
+          # 🌟 यह पायथन को रूट डायरेक्टरी से config, utils आदि इम्पोर्ट करने की अनुमति देगा
+          PYTHONPATH: .
         run: |
           python src/data_ingestion/data_ingestion.py
 
