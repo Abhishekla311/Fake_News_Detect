@@ -10,18 +10,10 @@ __pycache__/
 .env
 logs/
 
-venv/
-__pycache__/
-*.pyc
-
 # DVC local cache and run files
 .dvc/cache
 .dvc/tmp
 
-# Data and Models (tracked by DVC indddstead)
-
+# Data and Models (tracked by DVC instead)
 data/
-logs/
 *.csv
-
-.env
