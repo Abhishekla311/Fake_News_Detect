@@ -39,8 +39,8 @@ jobs:
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+          username: ${{secrets.DOCKER_USERNAME}}
+          password: ${{secrets.DOCKER_PASSWORD}}
 
       - name: Build and Push FastAPI Image
         uses: docker/build-push-action@v5
@@ -48,14 +48,14 @@ jobs:
           context: .
           file: Dockerfile.fastapi
           push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/fakenews-fastapi:latest
+          tags: ${{secrets.DOCKER_USERNAME}}/fakenews-fastapi:latest
 
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.HOST_IP }}
-          username: ${{ secrets.HOST_USER }}
-          key: ${{ secrets.HOST_SSH_KEY }}
+          host: ${{secrets.HOST_IP}}
+          username: ${{secrets.HOST_USER}}
+          key: ${{secrets.HOST_SSH_KEY}}
           script: |
             cd /opt/fakenews-app || mkdir -p /opt/fakenews-app && cd /opt/fakenews-app
             docker compose pull

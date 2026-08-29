@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
       - name: fastapi
-        image: abhishekla311/fakenews-fastapi:latest
+        image: abhishekqaz6354/fakenews-fastapi:latest
         ports:
         - containerPort: 8000
         env:
