@@ -42,7 +42,7 @@ jobs:
 
       - name: Setup Astronomer Engine Framework
         run: |
-          curl -sSL https://install.astronomer.io | sudo bash -s -- v1.28.0
+          curl -sSL https://install.astronomer.io | sudo bash
 
       - name: Validate DAG Integrity (Parse Check)
         run: |
