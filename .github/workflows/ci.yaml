@@ -32,8 +32,8 @@ jobs:
       # AWS US-EAST-1 कीज़ और ऑटो-ट्रिम सेफ्टी नेट के साथ डेटा इनजेशन टेस्ट रन करना
       - name: Run Data Ingestion Validation
         env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY_ID}}
+          AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
           AWS_DEFAULT_REGION: "us-east-1"
           PYTHONPATH: .
         run: |
@@ -43,7 +43,8 @@ jobs:
 
       - name: Setup Astronomer Engine Framework
         run: |
-          curl -sSL https://astronomer.io | sudo bash
+          # 🌟 यूआरएल को 'astronomer.io' से बदलकर 'install.astronomer.io' कर दिया गया है
+          curl -sSL https://install.astronomer.io | sudo bash
 
       - name: Validate DAG Integrity (Parse Check)
         run: |
