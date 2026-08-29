@@ -89,8 +89,7 @@ def read_root(request: Request):
 
 @app.post("/predict", response_class=HTMLResponse)
 async def predict_news(request: Request, Input_data: str = Form(...)):
-    global model, vectorizer, drift_detector
-    
+   
     if model is None or vectorizer is None:
         return templates.TemplateResponse(
             request=request,
