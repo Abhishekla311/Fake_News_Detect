@@ -1,36 +1,24 @@
-# Virtual Environment
-venv311/
-env/
-.venv/
-
+# Virtual Environments
 venv/
+.venv/
+env/
 venv311/
-.git/
-.env
+
+# Python Cache & Bytecode
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
-artifacts/
+
+# Environment Secrets & Logs
+.env
+*.log
 logs/
 
-
-# Git & DVC local tracking files
+# Version Control & DVC Cache
 .git/
-.gitignore
 .dvc/cache/
 .dvc/tmp/
-.dvcignore
 
-# Python bytecode & Cache
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-
-# Environment secrets
-.env
-
-# Logs and system files
-*.log
+# OS System Files
 .DS_Store
