@@ -46,7 +46,8 @@ jobs:
 
       - name: Validate DAG Integrity (Parse Check)
         run: |
-          astro dag parse
+          # 🌟 पुराने कमांड 'astro dag parse' को नए कमांड 'astro dev parse' से बदल दिया गया है
+          astro dev par
 
   containerization-and-delivery:
     needs: code-quality-and-pipeline-test
