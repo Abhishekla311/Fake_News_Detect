@@ -18,7 +18,7 @@ __pycache__/
 .dvc/cache
 .dvc/tmp
 
-# Data and Models (tracked by DVC instead)
+# Data and Models (tracked by DVC indddstead)
 
 data/
 logs/
