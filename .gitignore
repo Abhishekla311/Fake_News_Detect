@@ -1,4 +1,16 @@
 # Virtual Environment & Python cache
+venv311/
+env/
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+logs/
+artifacts/
+ss
 venv/
 __pycache__/
 *.pyc

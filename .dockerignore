@@ -1,7 +1,19 @@
 # Virtual Environment
-venv/
+venv311/
 env/
 .venv/
+
+venv/
+venv311/
+.git/
+.env
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+artifacts/
+logs/
+
 
 # Git & DVC local tracking files
 .git/

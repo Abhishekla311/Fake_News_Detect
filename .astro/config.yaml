@@ -1,0 +1,10 @@
+deployments:
+  - env: dev
+    executor: celery
+    image:
+      name: quay.io/astronomer/astro-runtime:12.6.0
+    name: dev
+    volumes:
+      - ./include:/usr/local/airflow/include
+project:
+    name: fake_news

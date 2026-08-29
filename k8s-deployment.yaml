@@ -1,0 +1,148 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mlops-cloud-credentials
+  namespace: default
+type: Opaque
+data:
+  # इन प्लेसहोल्डर्स को GitHub Actions पाइपलाइन चलते समय रनर के अंदर ऑटोमैटिक बदल दिया जाएगा।
+  # इसे गिटहब पर कमिट करना 100% सुरक्षित है।
+  AWS_ACCESS_KEY_ID: AWS_ACCESS_KEY_ID_PLACEHOLDER
+  AWS_SECRET_ACCESS_KEY: AWS_SECRET_ACCESS_KEY_PLACEHOLDER
+  CAPSTONE_TEST: CAPSTONE_TEST_PLACEHOLDER
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-cache
+  namespace: default
+  labels:
+    app: redis-cache
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis-cache
+  template:
+    metadata:
+      labels:
+        app: redis-cache
+    spec:
+      containers:
+        - name: redis
+          image: redis:7.0-alpine
+          ports:
+            - containerPort: 6379
+              name: redis-port
+          resources:
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-service
+  namespace: default
+spec:
+  ports:
+    - port: 6379
+      targetPort: 6379
+  selector:
+    app: redis-cache
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fake-news-inference-engine
+  namespace: default
+  labels:
+    app: fake-news-engine
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: fake-news-engine
+  template:
+    metadata:
+      labels:
+        app: fake-news-engine
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+        - name: inference-api-server
+          # 🛑 123456789012 को अपने असली AWS Account ID से बदलें
+          image: ://amazonaws.com
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8000
+              name: api-http
+          env:
+            - name: ENV
+              value: "production"
+            - name: REDIS_HOST
+              value: "redis-service"
+            - name: REDIS_PORT
+              value: "6379"
+            - name: CAPSTONE_TEST
+              valueFrom:
+                secretKeyRef:
+                  name: mlops-cloud-credentials
+                  key: CAPSTONE_TEST
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: mlops-cloud-credentials
+                  key: AWS_ACCESS_KEY_ID
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: mlops-cloud-credentials
+                  key: AWS_SECRET_ACCESS_KEY
+            - name: AWS_DEFAULT_REGION
+              value: "us-east-1"
+          resources:
+            limits:
+              cpu: "1000m"
+              memory: "1Gi"
+            requests:
+              cpu: "500m"
+              memory: "512Mi"
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8000
+            initialDelaySeconds: 20
+            periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fake-news-engine-service
+  namespace: default
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: 8000
+      protocol: TCP
+      name: http-routing
+  selector:
+    app: fake-news-engine

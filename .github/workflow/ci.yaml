@@ -1,0 +1,83 @@
+name: Production MLOps Engine CI/CD
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  code-quality-and-pipeline-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch Repository Source
+        uses: actions/checkout@v4
+
+      - name: Initialize Python 3.11 Environment
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Bootstrap Project Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8 pytest boto3 pandas scikit-learn redis nltk joblib mlflow alibi-detect prometheus-client fastapi uvicorn python-dotenv psycopg2-binary sqlalchemy
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: Code Quality Syntax Linting
+        run: |
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+
+      # AWS US-EAST-1 कीज़ के साथ डेटा इनजेशन टेस्ट रन करना
+      - name: Run Data Ingestion Validation
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: "us-east-1"
+        run: |
+          python src/data_ingestion.py
+
+      - name: Setup Astronomer Engine Framework
+        run: |
+          curl -sSL https://install.astronomer.io | sudo bash -s -- v1.28.0
+
+      - name: Validate DAG Integrity (Parse Check)
+        run: |
+          astro dag parse
+
+  containerization-and-delivery:
+    needs: code-quality-and-pipeline-test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch Repository Source
+        uses: actions/checkout@v4
+
+      # 1. AWS Credentials कॉन्फ़िगर करें (ECR एक्सेस के लिए)
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      # 2. Amazon ECR में सुरक्षित रूप से लॉगिन करें
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Configure Advanced Build Tools (Buildx)
+        uses: docker/setup-buildx-action@v3
+
+      # 3. Docker Image बिल्ड करके AWS ECR में पुश करें
+      - name: Build and Push Immutable Container to AWS ECR
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ steps.login-ecr.outputs.registry }}/fake-news-mlops:latest
+            ${{ steps.login-ecr.outputs.registry }}/fake-news-mlops:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

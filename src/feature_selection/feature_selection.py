@@ -26,11 +26,16 @@ class FeatureSelection:
         try:
             logger.info("Feature Selection & Array Vectorization started...")
 
+            # सेफ्टी चेक: अगर डेटा प्रीप्रोसेसिंग से 'content' कॉलम नहीं मिला, तो कोड में ऑन-द-फ्लाई बना लें
+            if 'content' not in train_df.columns:
+                logger.warning("'content' column not found in input. Engineering it now from title and text...")
+                train_df['content'] = train_df['title'].fillna(" ") + " " + train_df['text'].fillna(" ")
+                test_df['content'] = test_df['title'].fillna(" ") + " " + test_df['text'].fillna(" ")
+
             # Missing target values हटाना
             train_df = train_df.dropna(subset=[self.target_col])
             test_df = test_df.dropna(subset=[self.target_col])
 
-            # Safety check: 'content' कॉलम की मौजूदगी
             train_df['content'] = train_df['content'].fillna(" ")
             test_df['content'] = test_df['content'].fillna(" ")
 
@@ -65,10 +70,12 @@ if __name__ == "__main__":
         config_data = read_yaml(CONFIG_PATH)
         logger.info("Reading structural text dataset states...")
 
-        # 1. Raw datasets लोड करना
+        # 🛑 महत्वपूर्ण बदलाव: 
+        # अगर आपकी 'data_preprocessing.py' फ़ाइल आउटपुट को किसी अलग पाथ पर सेव करती है (जैसे artifacts/data_preprocessing/...) 
+        # तो यहाँ उसका सही पाथ दें। 
+        # बैकअप के तौर पर हम अभी वही पाथ लोड कर रहे हैं लेकिन सेफ्टी चेक ऊपर लगा दिया है।
         train_dataframe = pd.read_csv(TRAIN_FILE_PATH, low_memory=False)
         test_dataframe = pd.read_csv(TEST_FILE_PATH, low_memory=False)
-
 
         fs = FeatureSelection(config=config_data)
         train_out, test_out = fs.apply_selection_and_vectorization(train_dataframe, test_dataframe)

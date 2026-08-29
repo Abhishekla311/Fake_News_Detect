@@ -8,42 +8,62 @@
     <style>
         body {
             background-color: #f8f9fa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
         }
-        .main-card {
-            max-width: 700px;
-            margin: 50px auto;
+        .container-card {
+            background: #ffffff;
             border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            padding: 30px;
+            max-width: 650px;
+            width: 100%;
+        }
+        .btn-custom {
+            background-color: #0d6efd;
+            border: none;
+            padding: 12px;
+            font-weight: 500;
+        }
+        .alert-box {
+            margin-top: 20px;
+            font-weight: 700;
+            font-size: 1.1rem;
+            text-align: center;
+            padding: 15px;
+            border-radius: 6px;
         }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <div class="card main-card p-4 bg-white">
-        <h2 class="text-center mb-4 text-primary">📰 Fake News Detection System</h2>
+<div class="container-card">
+    <h3 class="text-center mb-4">📰 Fake News Detection System</h3>
+    
+    <form action="/predict" method="post">
+        <div class="mb-3">
+            <label for="Input_data" class="form-label fw-semibold">Enter News Content/Article:</label>
+            <textarea 
+                class="form-control" 
+                id="Input_data" 
+                name="Input_data" 
+                rows="6" 
+                placeholder="Paste article text here..." 
+                required>{% if input_text %}{{ input_text }}{% endif %}</textarea>
+        </div>
         
-        <form action="/predict" method="post">
-            <div class="mb-3">
-                <label for="Input_data" class="form-label fw-bold">Enter News Content/Article:</label>
-                <textarea 
-                    class="form-control" 
-                    id="Input_data" 
-                    name="Input_data" 
-                    rows="6" 
-                    placeholder="Paste full news headline or text here..." 
-                    required>{{ input_text if input_text else '' }}</textarea>
-            </div>
-            
-            <button type="submit" class="btn btn-primary w-100 py-2 fs-5">Analyze Content</button>
-        </form>
+        <button type="submit" class="btn btn-primary w-100 btn-custom">Analyze Content</button>
+    </form>
 
-        {% if prediction %}
-        <div class="mt-4 alert alert-{{ alert_class }} text-center fs-5 fw-bold" role="alert">
+    <!-- EXCLUSIVE SINGLE ALERT OUTPUT -->
+    {% if prediction %}
+        <div class="alert alert-{{ alert_class }} alert-box" role="alert">
             {{ prediction }}
         </div>
-        {% endif %}
-    </div>
+    {% endif %}
 </div>
 
 </body>
