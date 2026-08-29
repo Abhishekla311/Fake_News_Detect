@@ -41,7 +41,7 @@ jobs:
           CLEAN_AWS_SECRET=$(echo -n "$AWS_SECRET_ACCESS_KEY" | tr -d '\r\n ')
           AWS_ACCESS_KEY_ID=$CLEAN_AWS_ID AWS_SECRET_ACCESS_KEY=$CLEAN_AWS_SECRET python src/data_ingestion/data_ingestion.py
 
-      # 🌟 फ़िक्स: यहाँ सही डाउनलोड लिंक 'install.astronomer.io' का उपयोग किया गया है
+      # Setup Astronomer CLI Framework
       - name: Setup Astronomer Engine Framework
         run: |
           curl -sSL https://install.astronomer.io | sudo bash
@@ -58,7 +58,7 @@ jobs:
       - name: Fetch Repository Source
         uses: actions/checkout@v4
 
-      # 1. AWS Credentials कॉन्फ़िगर करें (ECR और EKS एक्सेस के लिए)
+      # 1. AWS Credentials कॉन्फ़िगर करें (ECR एक्सेस के लिए)
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -80,15 +80,14 @@ jobs:
       - name: Configure Advanced Build Tools (Buildx)
         uses: docker/setup-buildx-action@v3
 
-      # 4. Docker Image बिल्ड करके AWS ECR में पुश करें
-           # 3. Docker Image बिल्ड करके सीधे आपकी 672755423000 रिपॉजिटरी में पुश करना
+      # 4. Docker Image बिल्ड करके सीधे आपकी 672755423000 रिपॉजिटरी में पुश करना
       - name: Build and Push Immutable Container to AWS ECR
         uses: docker/build-push-action@v5
         with:
           context: .
-          # 🌟 यह गिटहब को बताएगा कि सामान्य Dockerfile की जगह Dockerfile.fastapi का इस्तेमाल करना है
           file: Dockerfile.fastapi
           push: true
+          # 🌟 फ़िक्स: यहाँ आपकी असली AWS ECR रजिस्ट्री का पूरा पाथ सेट कर दिया गया है
           tags: |
             ://amazonaws.com
             ://amazonaws.com{{github.sha}}
