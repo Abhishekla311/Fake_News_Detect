@@ -22,9 +22,7 @@ VECTORIZER_PATH = os.path.join(BASE_DIR, "artifact", "processed", "vectorizer.pk
 BASELINE_DATA_PATH = os.path.join(BASE_DIR, "artifacts", "baseline_features.npy")
 RAW_DATA_PATH = os.path.join(BASE_DIR, "data", "train.csv") # Fallback raw training path
 
-model = None
-vectorizer = None
-drift_detector = None 
+
 
 # Prometheus Counters
 prediction_count = Counter('prediction_count', "Number of prediction count")
