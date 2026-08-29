@@ -37,13 +37,13 @@ jobs:
           AWS_DEFAULT_REGION: "us-east-1"
           PYTHONPATH: .
         run: |
-          CLEAN_AWS_ID=$(echo -n "$AWS_ACCESS_KEY_ID" | tr -d '\r\n ' )
-          CLEAN_AWS_SECRET=$(echo -n "$AWS_SECRET_ACCESS_KEY" | tr -d '\r\n ' )
+          CLEAN_AWS_ID=$(echo -n "$AWS_ACCESS_KEY_ID" | tr -d '\r\n ')
+          CLEAN_AWS_SECRET=$(echo -n "$AWS_SECRET_ACCESS_KEY" | tr -d '\r\n ')
           AWS_ACCESS_KEY_ID=$CLEAN_AWS_ID AWS_SECRET_ACCESS_KEY=$CLEAN_AWS_SECRET python src/data_ingestion/data_ingestion.py
 
+      # 🌟 फ़िक्स: यहाँ सही डाउनलोड लिंक 'install.astronomer.io' का उपयोग किया गया है
       - name: Setup Astronomer Engine Framework
         run: |
-          # 🌟 यूआरएल को 'astronomer.io' से बदलकर 'install.astronomer.io' कर दिया गया है
           curl -sSL https://install.astronomer.io | sudo bash
 
       - name: Validate DAG Integrity (Parse Check)
@@ -71,7 +71,7 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      # 🔥 3. ऑटो-क्रिएट सुरक्षा कवच: यह आपके अकाउंट में 'fake-news-mlops' रिपॉजिटरी खुद बना देगा
+      # 3. ऑटो-क्रिएट सुरक्षा कवच: यह आपके अकाउंट में 'fake-news-mlops' रिपॉजिटरी खुद बना देगा
       - name: Auto Create ECR Repository if missing
         run: |
           aws ecr describe-repositories --repository-names fake-news-mlops --region us-east-1 || \
@@ -106,5 +106,6 @@ jobs:
       # 6. k8s फ़ोल्डर के मैनिफेस्ट को सीधे अमेज़न EKS क्लस्टर पर अप्लाई करना
       - name: Deploy Manifests to Amazon EKS Cluster
         run: |
+          # 🛑 YOUR_EKS_CLUSTER_NAME_HERE को अपने असली AWS EKS क्लस्टर नेम से बदलें
           aws eks update-kubeconfig --region us-east-1 --name fake-news-mlops
           kubectl apply -f k8s/k8s-deployment.yaml
