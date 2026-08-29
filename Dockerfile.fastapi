@@ -16,6 +16,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Download NLTK corpora inside container
 RUN python -c "import nltk; nltk.download('stopwords'); nltk.download('punkt')"
 
+COPY artifact/ /app/artifact/
+COPY artifacts/ /app/artifacts/
+
 # Copy full application source code
 COPY . .
 

@@ -9,8 +9,7 @@ __pycache__/
 *.pyd
 .env
 logs/
-artifacts/
-ss
+
 venv/
 __pycache__/
 *.pyc
