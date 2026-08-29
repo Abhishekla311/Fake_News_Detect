@@ -27,7 +27,7 @@ model = None
 vectorizer = None
 drift_detector = None 
 
-# Prometheus Counters
+# Prometheus Countersgfb
 prediction_count = Counter('prediction_count', "Number of prediction count")
 drift_count = Counter('drift_count', "Number of times data drift is detected")
 
