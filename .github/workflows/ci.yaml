@@ -85,31 +85,12 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
+          # 🌟 यह गिटहब को बताएगा कि सामान्य Dockerfile की जगह Dockerfile.fastapi का इस्तेमाल करना है
+          file: Dockerfile.fastapi
           push: true
           tags: |
-            ${{steps.login-ecr.outputs.registry}}/fake-news-mlops:latest
-            ${{steps.login-ecr.outputs.registry}}/fake-news-mlops:${{github.sha}}
+            ://amazonaws.com
+            ://amazonaws.com{{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # 5. k8s फ़ोल्डर के अंदर मौजूद पैरामेटर्स को असली Secrets (Base64 कनवर्टेड) से बदलना
-      # 5. k8s-deployment.yaml फ़ाइल के अंदर मौजूद प्लेसहोल्डर्स को असली Secrets से बदलना
-           # 5. k8s-deployment.yaml फ़ाइल के अंदर पैरामेटर्स को असली Secrets से बदलना
-      - name: Inject Secure Base64 Secrets to K8s Manifest
-        run: |
-          B64_AWS_ID=$(echo -n "${{secrets.AWS_ACCESS_KEY_ID}}" | base64 -w 0)
-          B64_AWS_SECRET=$(echo -n "${{secrets.AWS_SECRET_ACCESS_KEY}}" | base64 -w 0)
-          B64_CAPSTONE=$(echo -n "${{secrets.CAPSTONE_TEST}}" | base64 -w 0)
-          
-          # 🌟 फ़िक्स: यहाँ 'k8s/k8s-deployment.yaml' से 'k8s/' हटाकर डायरेक्ट फ़ाइल नाम दिया गया है
-          sed -i "s/AWS_ACCESS_KEY_ID_PLACEHOLDER/$B64_AWS_ID/g" k8s-deployment.yaml
-          sed -i "s/AWS_SECRET_ACCESS_KEY_PLACEHOLDER/$B64_AWS_SECRET/g" k8s-deployment.yaml
-          sed -i "s/CAPSTONE_TEST_PLACEHOLDER/$B64_CAPSTONE/g" k8s-deployment.yaml
-
-      # 6. मैनिफेस्ट को सीधे अमेज़न EKS क्लстер पर अप्लाई करना
-      - name: Deploy Manifests to Amazon EKS Cluster
-        run: |
-          # 🛑 YOUR_EKS_CLUSTER_NAME_HERE को अपने असली AWS EKS क्लस्टर नेम से बदलें
-          aws eks update-kubeconfig --region us-east-1 --name fake-news-mlops
-          # 🌟 फ़िक्स: यहाँ भी 'k8s/' हटा दिया गया है
-          kubectl apply -f k8s-deployment.yaml
