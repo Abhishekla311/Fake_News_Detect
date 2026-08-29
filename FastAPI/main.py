@@ -3,10 +3,10 @@ import re
 import joblib
 import uvicorn
 import numpy as np
-from prometheus_client import generate_latest, Counter, Gauge, CONTENT_TYPE_LATEST # इम्पोर्ट्स को सुधारा
+from prometheus_client import generate_latest, Counter, CONTENT_TYPE_LATEST
 import pandas as pd
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Form, Request, Response # 'Response' यहाँ इम्पोर्ट किया
+from fastapi import FastAPI, Form, Request, Response
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
@@ -22,7 +22,10 @@ VECTORIZER_PATH = os.path.join(BASE_DIR, "artifact", "processed", "vectorizer.pk
 BASELINE_DATA_PATH = os.path.join(BASE_DIR, "artifacts", "baseline_features.npy")
 RAW_DATA_PATH = os.path.join(BASE_DIR, "data", "train.csv") # Fallback raw training path
 
-
+# 🌟 फ़िक्स 1: ग्लोबल वैरियेबल्स को फ़ाइल स्कोप में डिक्लेयर किया गया (ताकि flake8 एरर न दे)
+model = None
+vectorizer = None
+drift_detector = None 
 
 # Prometheus Counters
 prediction_count = Counter('prediction_count', "Number of prediction count")
@@ -35,7 +38,8 @@ def clean_text(text: str) -> str:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-   
+    # 🌟 फ़िक्स 2: 'global' कीवर्ड यहाँ भी जोड़ा गया ताकि लोड हुआ मॉडल नीचे प्रेडिक्शन फ़ंक्शन में मिल सके
+    global model, vectorizer, drift_detector
     try:
         if os.path.exists(MODEL_OUTPUT_PATH) and os.path.exists(VECTORIZER_PATH):
             model = joblib.load(MODEL_OUTPUT_PATH)
@@ -89,7 +93,9 @@ def read_root(request: Request):
 
 @app.post("/predict", response_class=HTMLResponse)
 async def predict_news(request: Request, Input_data: str = Form(...)):
-    global model, vectorizer, drift_detector
+    # 🌟 फ़िक्स 3: यहाँ global वेरिएबल्स केवल पढ़े (Read) जा रहे हैं और मॉडिफाई (Modify) नहीं हो रहे, 
+    # इसलिए flake8 F824 अनयूज़्ड एरर से बचने के लिए इसे हटाकर सीधे ग्लोबल स्कोप से रीड किया गया।
+    
     if model is None or vectorizer is None:
         return templates.TemplateResponse(
             request=request,
@@ -158,7 +164,6 @@ async def predict_news(request: Request, Input_data: str = Form(...)):
             "input_text": Input_data
         }
     )
-
 
 @app.get("/metrics")
 def metrics():
