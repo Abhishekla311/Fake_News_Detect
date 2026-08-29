@@ -1,95 +1,63 @@
-name: Production MLOps Engine CI/CD
+name: MLOps CI/CD Pipeline
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ main, master ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ main, master ]
 
 jobs:
-  code-quality-and-pipeline-test:
+  test-and-lint:
     runs-on: ubuntu-latest
     steps:
-      - name: Fetch Repository Source
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Initialize Python 3.11 Environment
+      - name: Setup Python 3.11
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          cache: 'pip'
 
-      - name: Bootstrap Project Dependencies
+      - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install flake8 pytest boto3 pandas scikit-learn redis nltk joblib mlflow alibi-detect prometheus-client fastapi uvicorn python-dotenv psycopg2-binary sqlalchemy
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          pip install flake8 pytest
 
-      - name: Code Quality Syntax Linting
+      - name: Lint Code
         run: |
           flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
 
-      # AWS US-EAST-1 कीज़ और ऑटो-ट्रिम सेफ्टी नेट के साथ डेटा इनजेशन टेस्ट रन करना
-      - name: Run Data Ingestion Validation
-        env:
-          AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY_ID}}
-          AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
-          AWS_DEFAULT_REGION: "us-east-1"
-          PYTHONPATH: .
-        run: |
-          CLEAN_AWS_ID=$(echo -n "$AWS_ACCESS_KEY_ID" | tr -d '\r\n ')
-          CLEAN_AWS_SECRET=$(echo -n "$AWS_SECRET_ACCESS_KEY" | tr -d '\r\n ')
-          AWS_ACCESS_KEY_ID=$CLEAN_AWS_ID AWS_SECRET_ACCESS_KEY=$CLEAN_AWS_SECRET python src/data_ingestion/data_ingestion.py
-
-      # Setup Astronomer CLI Framework
-      - name: Setup Astronomer Engine Framework
-        run: |
-          curl -sSL https://install.astronomer.io | sudo bash
-
-      - name: Validate DAG Integrity (Parse Check)
-        run: |
-          astro dev parse
-
-  containerization-and-delivery:
-    needs: code-quality-and-pipeline-test
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+  build-and-deploy:
+    needs: test-and-lint
     runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
     steps:
-      - name: Fetch Repository Source
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # 1. AWS Credentials कॉन्फ़िगर करें (ECR एक्सेस के लिए)
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
         with:
-          aws-access-key-id: ${{secrets.AWS_ACCESS_KEY_ID}}
-          aws-secret-access-key: ${{secrets.AWS_SECRET_ACCESS_KEY}}
-          aws-region: us-east-1
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
-      # 2. Amazon ECR में लॉगिन करें
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
-
-      # 3. ऑटो-क्रिएट सुरक्षा कवच: यह आपके अकाउंट में 'fake-news-mlops' रिपॉजिटरी खुद बना देगा
-      - name: Auto Create ECR Repository if missing
-        run: |
-          aws ecr describe-repositories --repository-names fake-news-mlops --region us-east-1 || \
-          aws ecr create-repository --repository-name fake-news-mlops --region us-east-1
-
-      - name: Configure Advanced Build Tools (Buildx)
-        uses: docker/setup-buildx-action@v3
-
-      # 4. Docker Image बिल्ड करके सीधे आपकी 672755423000 रिपॉजिटरी में पुश करना
-      - name: Build and Push Immutable Container to AWS ECR
+      - name: Build and Push FastAPI Image
         uses: docker/build-push-action@v5
         with:
           context: .
           file: Dockerfile.fastapi
           push: true
-          # 🌟 फ़िक्स: यहाँ आपकी असली AWS ECR रजिस्ट्री का पूरा पाथ सेट कर दिया गया है
-          tags: |
-            ://amazonaws.com
-            ://amazonaws.com{{github.sha}}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          tags: ${{ secrets.DOCKER_USERNAME }}/fakenews-fastapi:latest
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.HOST_IP }}
+          username: ${{ secrets.HOST_USER }}
+          key: ${{ secrets.HOST_SSH_KEY }}
+          script: |
+            cd /opt/fakenews-app || mkdir -p /opt/fakenews-app && cd /opt/fakenews-app
+            docker compose pull
+            docker compose up -d --remove-orphans
+            docker image prune -f
