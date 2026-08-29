@@ -53,11 +53,25 @@ jobs:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{secrets.HOST_IP}}
-          username: ${{secrets.HOST_USER}}
-          key: ${{secrets.HOST_SSH_KEY}}
+          host: ${{ secrets.HOST_IP }}
+          username: ${{ secrets.HOST_USER }}
+          key: ${{ secrets.HOST_SSH_KEY }}
           script: |
-            cd /opt/fakenews-app || mkdir -p /opt/fakenews-app && cd /opt/fakenews-app
-            docker compose pull
-            docker compose up -d --remove-orphans
-            docker image prune -f
+            # Docker इंस्टॉल है या नहीं चेक करें और न होने पर इंस्टॉल करें
+            if ! command -v docker &> /dev/null; then
+              sudo apt-get update
+              sudo apt-get install -y docker.io docker-compose-v2
+              sudo usermod -aG docker ${{ secrets.HOST_USER }}
+            fi
+
+            # डायरेक्टरी बनाएँ
+            sudo mkdir -p /opt/fakenews-app
+            sudo chown -R ${{ secrets.HOST_USER }}:${{ secrets.HOST_USER }} /opt/fakenews-app
+            cd /opt/fakenews-app
+
+            # पुरानी ऐप रोककर नयी इमेज चलाएँ
+            sudo docker pull abhishekqaz6354/fakenews-fastapi:latest
+            sudo docker stop fastapi-app || true
+            sudo docker rm fastapi-app || true
+            sudo docker run -d --name fastapi-app -p 8000:8000 abhishekqaz6354/fakenews-fastapi:latest
+            sudo docker image prune -f
