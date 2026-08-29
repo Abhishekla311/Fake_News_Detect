@@ -32,8 +32,8 @@ jobs:
       # AWS US-EAST-1 कीज़ के साथ डेटा इनजेशन टेस्ट रन करना
       - name: Run Data Ingestion Validation
         env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY_ID}}
+          AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
           AWS_DEFAULT_REGION: "us-east-1"
           # 🌟 यह पायथन को रूट डायरेक्टरी से config, utils आदि इम्पोर्ट करने की अनुमति देगा
           PYTHONPATH: .
@@ -60,8 +60,8 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-access-key-id: ${{secrets.AWS_ACCESS_KEY_ID}}
+          aws-secret-access-key: ${{secrets.AWS_SECRET_ACCESS_KEY}}
           aws-region: us-east-1
 
       # 2. Amazon ECR में सुरक्षित रूप से लॉगिन करें
@@ -79,7 +79,7 @@ jobs:
           context: .
           push: true
           tags: |
-            ${{ steps.login-ecr.outputs.registry }}/fake-news-mlops:latest
-            ${{ steps.login-ecr.outputs.registry }}/fake-news-mlops:${{ github.sha }}
+            ${{steps.login-ecr.outputs.registry}}/fake-news-mlops:latest
+            ${{steps.login-ecr.outputs.registry}}/fake-news-mlops:${{github.sha}}
           cache-from: type=gha
           cache-to: type=gha,mode=max
