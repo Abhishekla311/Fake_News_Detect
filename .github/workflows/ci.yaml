@@ -17,7 +17,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      
+
       - name: Pull DVC Data
         env:
           AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY_ID}}
@@ -58,28 +58,32 @@ jobs:
           push: true
           tags: ${{secrets.DOCKER_USERNAME}}/fakenews-fastapi:latest
 
-      - name: Deploy via SSH
+      - name: Deploy to Kubernetes via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.HOST_IP }}
-          username: ${{ secrets.HOST_USER }}
-          key: ${{ secrets.HOST_SSH_KEY }}
+          host: ${{secrets.HOST_IP}}
+          username: ${{ secrets.HOST_USER}}
+          key: ${{secrets.HOST_SSH_KEY }}
           script: |
-            # Docker इंस्टॉल है या नहीं चेक करें और न होने पर इंस्टॉल करें
-            if ! command -v docker &> /dev/null; then
-              sudo apt-get update
-              sudo apt-get install -y docker.io docker-compose-v2
-              sudo usermod -aG docker ${{ secrets.HOST_USER }}
+            # K3s / Kubernetes Check & Install
+            if ! command -v k3s &> /dev/null && ! command -v kubectl &> /dev/null; then
+              curl -sfL https://get.k3s.io | sh -
+              sudo chmod 644 /etc/rancher/k3s/k3s.yaml
             fi
 
-            # डायरेक्टरी बनाएँ
-            sudo mkdir -p /opt/fakenews-app
-            sudo chown -R ${{ secrets.HOST_USER }}:${{ secrets.HOST_USER }} /opt/fakenews-app
+            export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+
+            # Direct Code Repo Directory
+            mkdir -p /opt/fakenews-app
             cd /opt/fakenews-app
 
-            # पुरानी ऐप रोककर नयी इमेज चलाएँ
-            sudo docker pull abhishekqaz6354/fakenews-fastapi:latest
-            sudo docker stop fastapi-app || true
-            sudo docker rm fastapi-app || true
-            sudo docker run -d --name fastapi-app -p 8000:8000 abhishekqaz6354/fakenews-fastapi:latest
-            sudo docker image prune -f
+            # Git pull latest changes to get updated deployment.yaml
+            if [ -d ".git" ]; then
+              git pull origin main || git pull origin master
+            else
+              git clone https://github.com/${{github.repository}}.git .
+            fi
+
+            # Deploy all manifests to Kubernetes
+            kubectl apply -f deployment.yaml
+            kubectl rollout restart deployment/fastapi-deployment

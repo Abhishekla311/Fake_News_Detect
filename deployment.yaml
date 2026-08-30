@@ -31,10 +31,11 @@ kind: Service
 metadata:
   name: fastapi-service
 spec:
-  type: ClusterIP
+  type: NodePort
   ports:
   - port: 8000
     targetPort: 8000
+    nodePort: 30800
   selector:
     app: fastapi
 
