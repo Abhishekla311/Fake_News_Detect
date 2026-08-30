@@ -58,23 +58,34 @@ jobs:
           push: true
           tags: ${{secrets.DOCKER_USERNAME}}/fakenews-fastapi:latest
 
-      # 1. बिना Git clone किए सीधी deployment.yaml फ़ाइल EC2 पर कॉपी करें
-      - name: Copy deployment.yaml to EC2
+      # 1. ensure directory exists on EC2 before SCP
+      - name: Create Target Directory on EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{secrets.HOST_IP}}
+          username: ${{secrets.HOST_USER}}
+          key: ${{secrets.HOST_SSH_KEY}}
+          script: |
+            sudo mkdir -p /opt/fakenews-app
+            sudo chown -R ${{secrets.HOST_USER}}:${{secrets.HOST_USER}} /opt/fakenews-app
+
+      # 2. Copy manifest files directly
+      - name: Copy deployment files to EC2
         uses: appleboy/scp-action@v0.1.7
         with:
-          host: ${{ secrets.HOST_IP }}
-          username: ${{ secrets.HOST_USER }}
-          key: ${{ secrets.HOST_SSH_KEY }}
-          source: "deployment.yaml"
+          host: ${{secrets.HOST_IP}}
+          username: ${{secrets.HOST_USER}}
+          key: ${{secrets.HOST_SSH_KEY}}
+          source: "*.yaml"
           target: "/opt/fakenews-app/"
 
-      # 2. Kubernetes Deploy Execute करें
+      # 3. Install k3s, Wait for API Server, and Deploy
       - name: Deploy to Kubernetes via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.HOST_IP }}
-          username: ${{ secrets.HOST_USER }}
-          key: ${{ secrets.HOST_SSH_KEY }}
+          host: ${{secrets.HOST_IP}}
+          username: ${{secrets.HOST_USER}}
+          key: ${{secrets.HOST_SSH_KEY}}
           script: |
             export DEBIAN_FRONTEND=noninteractive
             if ! command -v k3s &> /dev/null && ! command -v kubectl &> /dev/null; then
@@ -84,6 +95,12 @@ jobs:
             sudo chmod 644 /etc/rancher/k3s/k3s.yaml
             export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
 
+            # Wait loop to avoid API Server TLS timeout hanging
+            echo "Waiting for k3s cluster readiness..."
+            until kubectl get nodes &>/dev/null; do
+              sleep 3
+            done
+
             cd /opt/fakenews-app
             kubectl apply -f deployment.yaml
-            kubectl rollout restart deployment/fastapi-deployment
+            kubectl rollout restart deployment/fastapi-deployment || true
