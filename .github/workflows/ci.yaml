@@ -65,7 +65,6 @@ jobs:
           username: ${{secrets.HOST_USER}}
           key: ${{secrets.HOST_SSH_KEY}}
           script: |
-            # K3s check and install without prompt
             export DEBIAN_FRONTEND=noninteractive
             if ! command -v k3s &> /dev/null && ! command -v kubectl &> /dev/null; then
               curl -sfL https://get.k3s.io | sh -
@@ -74,19 +73,19 @@ jobs:
             sudo chmod 644 /etc/rancher/k3s/k3s.yaml
             export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
 
-            # Create deployment directory
             mkdir -p /opt/fakenews-app
             cd /opt/fakenews-app
 
-            # Git safe fetch without hanging
+            # Fix repository URL with underscores (no spaces)
             if [ ! -d ".git" ]; then
               git init
-              git remote add origin https://github.com/Abhishekla311/Fake_News_Detect.git || true
+              git remote add origin https://github.com/Abhishekla311/Fake_News_Detect.git || git remote set-url origin https://github.com/Abhishekla311/Fake_News_Detect.git
+            else
+              git remote set-url origin https://github.com/Abhishekla311/Fake_News_Detect.git
             fi
 
             git fetch origin main
             git reset --hard origin/main
 
-            # Apply manifests
             kubectl apply -f deployment.yaml
             kubectl rollout restart deployment/fastapi-deployment
