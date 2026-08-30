@@ -22,7 +22,7 @@ VECTORIZER_PATH = os.path.join(BASE_DIR, "artifact", "processed", "vectorizer.pk
 BASELINE_DATA_PATH = os.path.join(BASE_DIR, "artifacts", "baseline_features.npy")
 RAW_DATA_PATH = os.path.join(BASE_DIR, "data", "train.csv") # Fallback raw training path
 
-# 🌟 फ़िक्स 1: ग्लोबल वैरियेबल्स को फ़ाइल स्कोप में डिक्लेयर किया गया (ताकि flake8 एरर न दे)
+# 🌟 फ़िक्स 1: ग्लोddबल वैरियेबल्स को फ़ाइल स्कोप में डिक्लेयर किया गया (ताकि flake8 एरर न दे)
 model = None
 vectorizer = None
 drift_detector = None 
