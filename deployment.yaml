@@ -77,8 +77,27 @@ spec:
 
 ---
 # ==========================================
-# 3. PROMETHEUS DEPLOYMENT & SERVICE
+# 3. PROMETHEUS CONFIGMAP, DEPLOYMENT & SERVICE
 # ==========================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+
+    scrape_configs:
+      - job_name: 'prometheus'
+        static_configs:
+          - targets: ['localhost:9090']
+
+      - job_name: 'fastapi-app'
+        metrics_path: '/metrics'
+        static_configs:
+          - targets: ['fastapi-service:8000']
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -96,8 +115,17 @@ spec:
       containers:
       - name: prometheus
         image: prom/prometheus:latest
+        args:
+          - "--config.file=/etc/prometheus/prometheus.yml"
         ports:
         - containerPort: 9090
+        volumeMounts:
+        - name: config-volume
+          mountPath: /etc/prometheus
+      volumes:
+      - name: config-volume
+        configMap:
+          name: prometheus-config
 ---
 apiVersion: v1
 kind: Service
