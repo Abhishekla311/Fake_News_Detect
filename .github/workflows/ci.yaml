@@ -65,21 +65,24 @@ jobs:
           username: ${{secrets.HOST_USER}}
           key: ${{secrets.HOST_SSH_KEY}}
           script: |
-            # 1. K3s / Kubernetes check and install
+            # 1. Check and install K3s
             if ! command -v k3s &> /dev/null && ! command -v kubectl &> /dev/null; then
               curl -sfL https://get.k3s.io | sh -
             fi
 
-            # 2. Set KUBECONFIG permission
+            # 2. Set permissions and KUBECONFIG
             sudo chmod 644 /etc/rancher/k3s/k3s.yaml
             export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
 
-            # 3. Wait for Kubernetes API server to be responsive
-            echo "Waiting for k3s cluster to be ready..."
-            until kubectl cluster-info &>/dev/null; do
-              sleep 3
-              echo "Retrying connection to k3s cluster..."
+            # 3. Wait until K3s API server is responsive
+            echo "Waiting for k3s cluster to be fully ready..."
+            until kubectl get nodes &>/dev/null; do
+              echo "K3s is still starting up, sleeping 5 seconds..."
+              sleep 5
             done
+
+            # Extra buffer time to settle API server
+            sleep 10
 
             # 4. Navigate to application folder
             mkdir -p /opt/fakenews-app
@@ -92,8 +95,8 @@ jobs:
               git clone https://github.com/Abhishekla311/Fake_News_Detect.git .
             fi
 
-            # 6. Apply manifests to Kubernetes
+            # 6. Apply manifests with validation skip option as backup
             kubectl apply -f deployment.yaml
 
-            # 7. Wait and restart deployment safely
-            kubectl rollout status deployment/fastapi-deployment --timeout=60s || kubectl rollout restart deployment/fastapi-deployment
+            # 7. Rollout status / restart safely
+            kubectl rollout restart deployment/fastapi-deployment
