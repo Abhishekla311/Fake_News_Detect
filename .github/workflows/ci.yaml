@@ -58,17 +58,7 @@ jobs:
           push: true
           tags: ${{secrets.DOCKER_USERNAME}}/fakenews-fastapi:latest
 
-      # 1. Manifests को सीधे EC2 user home folder में कॉपी करें (Sudo Password Prompt की ज़रूरत नहीं पड़ेगी)
-      - name: Copy deployment files to EC2
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{secrets.HOST_IP}}
-          username: ${{secrets.HOST_USER}}
-          key: ${{secrets.HOST_SSH_KEY}}
-          source: "*.yaml"
-          target: "fakenews-app"
-
-      # 2. Kubernetes Deploy Execute करें
+      # SCP हटा दिया गया है, डायरेक्ट single SSH step:
       - name: Deploy to Kubernetes via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -77,19 +67,19 @@ jobs:
           key: ${{secrets.HOST_SSH_KEY}}
           script: |
             export DEBIAN_FRONTEND=noninteractive
-            if ! command -v k3s &> /dev/null && ! command -v kubectl &> /dev/null; then
+            
+            # 1. K3s setup
+            if ! command -v k3s &> /dev/null; then
               curl -sfL https://get.k3s.io | sh -
             fi
-
             sudo chmod 644 /etc/rancher/k3s/k3s.yaml
             export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
 
-            # Wait loop to avoid API Server TLS timeout
-            echo "Waiting for k3s cluster readiness..."
+            # 2. Wait for k3s readiness
             until kubectl get nodes &>/dev/null; do
-              sleep 3
+              sleep 2
             done
 
-            cd ~/fakenews-app
-            kubectl apply -f deployment.yaml
+            # 3. Download and Apply deployment.yaml directly from GitHub
+            kubectl apply -f https://raw.githubusercontent.com/Abhishekla311/Fake_News_Detect/main/deployment.yaml
             kubectl rollout restart deployment/fastapi-deployment || true
