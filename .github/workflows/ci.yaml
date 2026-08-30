@@ -65,38 +65,28 @@ jobs:
           username: ${{secrets.HOST_USER}}
           key: ${{secrets.HOST_SSH_KEY}}
           script: |
-            # 1. Check and install K3s
+            # K3s check and install without prompt
+            export DEBIAN_FRONTEND=noninteractive
             if ! command -v k3s &> /dev/null && ! command -v kubectl &> /dev/null; then
               curl -sfL https://get.k3s.io | sh -
             fi
 
-            # 2. Set permissions and KUBECONFIG
             sudo chmod 644 /etc/rancher/k3s/k3s.yaml
             export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
 
-            # 3. Wait until K3s API server is responsive
-            echo "Waiting for k3s cluster to be fully ready..."
-            until kubectl get nodes &>/dev/null; do
-              echo "K3s is still starting up, sleeping 5 seconds..."
-              sleep 5
-            done
-
-            # Extra buffer time to settle API server
-            sleep 10
-
-            # 4. Navigate to application folder
+            # Create deployment directory
             mkdir -p /opt/fakenews-app
             cd /opt/fakenews-app
 
-            # 5. Git pull or clone latest code
-            if [ -d ".git" ]; then
-              git pull origin main || git pull origin master
-            else
-              git clone https://github.com/Abhishekla311/Fake_News_Detect.git .
+            # Git safe fetch without hanging
+            if [ ! -d ".git" ]; then
+              git init
+              git remote add origin https://github.com/Abhishekla311/Fake_News_Detect.git || true
             fi
 
-            # 6. Apply manifests with validation skip option as backup
-            kubectl apply -f deployment.yaml
+            git fetch origin main
+            git reset --hard origin/main
 
-            # 7. Rollout status / restart safely
+            # Apply manifests
+            kubectl apply -f deployment.yaml
             kubectl rollout restart deployment/fastapi-deployment
