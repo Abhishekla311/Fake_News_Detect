@@ -58,32 +58,42 @@ jobs:
           push: true
           tags: ${{secrets.DOCKER_USERNAME}}/fakenews-fastapi:latest
 
-      - name: Deploy to Kubernetes via SSH
+      - name: Deploy via SSH to EC2
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{secrets.HOST_IP}}
-          username: ${{ secrets.HOST_USER}}
-          key: ${{secrets.HOST_SSH_KEY }}
+          username: ${{secrets.HOST_USER}}
+          key: ${{secrets.HOST_SSH_KEY}}
           script: |
-            # K3s / Kubernetes Check & Install
+            # 1. K3s / Kubernetes check and install
             if ! command -v k3s &> /dev/null && ! command -v kubectl &> /dev/null; then
               curl -sfL https://get.k3s.io | sh -
-              sudo chmod 644 /etc/rancher/k3s/k3s.yaml
             fi
 
+            # 2. Set KUBECONFIG permission
+            sudo chmod 644 /etc/rancher/k3s/k3s.yaml
             export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
 
-            # Direct Code Repo Directory
+            # 3. Wait for Kubernetes API server to be responsive
+            echo "Waiting for k3s cluster to be ready..."
+            until kubectl cluster-info &>/dev/null; do
+              sleep 3
+              echo "Retrying connection to k3s cluster..."
+            done
+
+            # 4. Navigate to application folder
             mkdir -p /opt/fakenews-app
             cd /opt/fakenews-app
 
-            # Git pull latest changes to get updated deployment.yaml
+            # 5. Git pull or clone latest code
             if [ -d ".git" ]; then
               git pull origin main || git pull origin master
             else
-              git clone https://github.com/${{github.repository}}.git .
+              git clone https://github.com/Abhishekla311/Fake_News_Detect.git .
             fi
 
-            # Deploy all manifests to Kubernetes
+            # 6. Apply manifests to Kubernetes
             kubectl apply -f deployment.yaml
-            kubectl rollout restart deployment/fastapi-deployment
+
+            # 7. Wait and restart deployment safely
+            kubectl rollout status deployment/fastapi-deployment --timeout=60s || kubectl rollout restart deployment/fastapi-deployment
