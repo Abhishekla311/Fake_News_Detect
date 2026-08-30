@@ -58,12 +58,23 @@ jobs:
           push: true
           tags: ${{secrets.DOCKER_USERNAME}}/fakenews-fastapi:latest
 
-      - name: Deploy via SSH to EC2
+      # 1. बिना Git clone किए सीधी deployment.yaml फ़ाइल EC2 पर कॉपी करें
+      - name: Copy deployment.yaml to EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.HOST_IP }}
+          username: ${{ secrets.HOST_USER }}
+          key: ${{ secrets.HOST_SSH_KEY }}
+          source: "deployment.yaml"
+          target: "/opt/fakenews-app/"
+
+      # 2. Kubernetes Deploy Execute करें
+      - name: Deploy to Kubernetes via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{secrets.HOST_IP}}
-          username: ${{secrets.HOST_USER}}
-          key: ${{secrets.HOST_SSH_KEY}}
+          host: ${{ secrets.HOST_IP }}
+          username: ${{ secrets.HOST_USER }}
+          key: ${{ secrets.HOST_SSH_KEY }}
           script: |
             export DEBIAN_FRONTEND=noninteractive
             if ! command -v k3s &> /dev/null && ! command -v kubectl &> /dev/null; then
@@ -73,19 +84,6 @@ jobs:
             sudo chmod 644 /etc/rancher/k3s/k3s.yaml
             export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
 
-            mkdir -p /opt/fakenews-app
             cd /opt/fakenews-app
-
-            # Fix repository URL with underscores (no spaces)
-            if [ ! -d ".git" ]; then
-              git init
-              git remote add origin https://github.com/Abhishekla311/Fake_News_Detect.git || git remote set-url origin https://github.com/Abhishekla311/Fake_News_Detect.git
-            else
-              git remote set-url origin https://github.com/Abhishekla311/Fake_News_Detect.git
-            fi
-
-            git fetch origin main
-            git reset --hard origin/main
-
             kubectl apply -f deployment.yaml
             kubectl rollout restart deployment/fastapi-deployment
